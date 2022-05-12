@@ -1,6 +1,7 @@
 ﻿using asp_mvc_5_freshworks_oauth.App_Start;
 using asp_mvc_5_freshworks_oauth.Repositories;
 using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin;
 using Microsoft.Owin.Security;
@@ -28,6 +29,8 @@ namespace asp_mvc_5_freshworks_oauth
         private readonly ConcurrentDictionary<string, string> _authenticationCodes = new ConcurrentDictionary<string, string>(StringComparer.Ordinal);
         public static OAuthAuthorizationServerOptions OAuthOptions { get; private set; }
 
+       
+
         public void Configuration(IAppBuilder app)
         {
             app.CreatePerOwinContext(ApplicationDbContext.Create);
@@ -48,15 +51,11 @@ namespace asp_mvc_5_freshworks_oauth
                     OnGrantResourceOwnerCredentials = GrantResourceOwnerCredentials,
                     OnGrantClientCredentials = GrantClientCredetails
                 },
-
-                // Authorization code provider which creates and receives the authorization code.
                 AuthorizationCodeProvider = new AuthenticationTokenProvider
                 {
                     OnCreate = CreateAuthenticationCode,
                     OnReceive = ReceiveAuthenticationCode,
                 },
-
-                // Refresh token provider which creates and receives refresh token.
                 RefreshTokenProvider = new AuthenticationTokenProvider
                 {
                     OnCreate = CreateRefreshToken,
@@ -77,24 +76,26 @@ namespace asp_mvc_5_freshworks_oauth
                 LoginPath = new PathString("/Account/Login"),
                 Provider = new CookieAuthenticationProvider
                 {
-                    // Enables the application to validate the security stamp when the user logs in.
-                    // This is a security feature which is used when you change a password or add an external login to your account.  
                     OnValidateIdentity = SecurityStampValidator.OnValidateIdentity<ApplicationUserManager, ApplicationUser>(
                         validateInterval: TimeSpan.FromMinutes(30),
                         regenerateIdentity: (manager, user) => user.GenerateUserIdentityAsync(manager))
                 }
             });
             app.UseExternalSignInCookie(DefaultAuthenticationTypes.ExternalCookie);
-
             app.UseOAuthBearerAuthentication(new OAuthBearerAuthenticationOptions() { });
 
             Database.SetInitializer(new MigrateDatabaseToLatestVersion<AuthContext, asp_mvc_5_freshworks_oauth.Migrations.Configuration>());
         }
+
         private Task ValidateClientRedirectUri(OAuthValidateClientRedirectUriContext context)
         {
-            if (context.ClientId == "testmetest")
+            using (var repo = new AuthRepository())
             {
-                context.Validated("https://getaxey.myfreshworks.com/sp/OAUTH/444494898955480487/callback");
+                var client = repo.FindClient(context.ClientId);
+                if (client != null)
+                {
+                    context.Validated(client.AllowedOrigin);
+                }
             }
 
             return Task.FromResult(0);
@@ -134,13 +135,17 @@ namespace asp_mvc_5_freshworks_oauth
 
         private void ReceiveAuthenticationCode(AuthenticationTokenReceiveContext context)
         {
-
             string value;
             if (_authenticationCodes.TryRemove(context.Token, out value))
             {
                 context.DeserializeTicket(value);
             }
+
             Microsoft.Owin.Security.AuthenticationTicket ticket = Startup.OAuthOptions.AccessTokenFormat.Unprotect(context.Token);
+
+            var userManager = context.OwinContext.GetUserManager<ApplicationUserManager>();
+
+            var user = userManager.FindByEmail(ticket.Identity.Name);
 
             var identity = new ClaimsIdentity(new List<Claim>()
                 {
@@ -153,7 +158,7 @@ namespace asp_mvc_5_freshworks_oauth
                 }, DefaultAuthenticationTypes.ApplicationCookie);
 
             var authProps = new AuthenticationProperties();
-            authProps.Dictionary.Add("client_id", "testmetest");
+            authProps.Dictionary.Add("client_id", user.ClientId);
             authProps.ExpiresUtc = DateTimeOffset.Now.AddMinutes(1);
 
             ticket = new AuthenticationTicket(identity, authProps);

@@ -55,6 +55,13 @@ namespace asp_mvc_5_freshworks_oauth.Repositories
             return client;
         }
 
+        public Client DefaultClient()
+        {
+            var client = _ctx.Clients.FirstOrDefault();
+
+            return client;
+        }
+
         public async Task<bool> AddRefreshToken(RefreshToken token)
         {
 

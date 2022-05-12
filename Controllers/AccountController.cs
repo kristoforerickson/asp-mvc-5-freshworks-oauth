@@ -5,6 +5,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using asp_mvc_5_freshworks_oauth.Entities;
+using asp_mvc_5_freshworks_oauth.Repositories;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
@@ -151,7 +153,13 @@ namespace asp_mvc_5_freshworks_oauth
         {
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
+                Client client;
+
+                using (var repo = new AuthRepository())
+                {
+                    client = repo.DefaultClient();
+                }
+                var user = new ApplicationUser { UserName = model.Email, Email = model.Email, ClientId = client?.Id };
                 var result = await UserManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {

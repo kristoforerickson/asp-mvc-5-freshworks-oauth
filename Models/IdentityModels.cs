@@ -16,6 +16,8 @@ namespace asp_mvc_5_freshworks_oauth
             // Add custom user claims here
             return userIdentity;
         }
+
+        public virtual string ClientId { get; set; }
     }
 
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>

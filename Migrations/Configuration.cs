@@ -37,12 +37,12 @@
             {
                 new Client
                 { 
-                    Id = "16DDEED3-3F84-4150-9D66-BAD4C4692642",
+                    Id = "testmetest",
                     Secret= hashedSecret,
                     Name="FreshWorks Test SSO App",
                     Active = true,
                     RefreshTokenLifeTime = 7200,
-                    AllowedOrigin = "https://localhost:44328"
+                    AllowedOrigin = "https://getaxey.myfreshworks.com/sp/OAUTH/444494898955480487/callback"
                 }
             };
 
