@@ -403,6 +403,15 @@ namespace asp_mvc_5_freshworks_oauth
             return RedirectToAction("Index", "Home");
         }
 
+        [HttpGet]
+        public ActionResult Signout()
+        {
+            AuthenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
+            return RedirectToAction("Index", "Home");
+        }
+
+
+
         //
         // GET: /Account/ExternalLoginFailure
         [AllowAnonymous]
